@@ -23,7 +23,7 @@
 
 class QuickUnlockInterface
 {
-    Q_DISABLE_COPY_MOVE(QuickUnlockInterface)
+    Q_DISABLE_COPY(QuickUnlockInterface)
 
 public:
     QuickUnlockInterface() = default;
@@ -44,7 +44,7 @@ public:
 
 class QuickUnlockManager final
 {
-    Q_DISABLE_COPY_MOVE(QuickUnlockManager)
+    Q_DISABLE_COPY(QuickUnlockManager)
 
 public:
     QuickUnlockManager();

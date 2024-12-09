@@ -42,7 +42,7 @@ QuickUnlockManager::QuickUnlockManager()
 {
     // Create the native interface based on the platform
 #if defined(Q_OS_MACOS)
-    m_nativeInterface.reset(new TouchId());
+    m_nativeInterface.reset(new TouchID());
 #elif defined(Q_CC_MSVC)
     m_nativeInterface.reset(new WindowsHello());
 #elif defined(Q_OS_LINUX)
