@@ -936,7 +936,7 @@ void MainWindow::updateMenuActionState()
     m_ui->actionEntryEdit->setEnabled(singleEntrySelected);
     m_ui->actionEntryExpire->setEnabled(multiEntrySelected);
     m_ui->actionEntryDelete->setEnabled(multiEntrySelected);
-    bool hasRecycledEntries = (inDatabase && dbWidget->hasRecycledSelectedEntries());
+    bool hasRecycledEntries = (inDatabase && dbWidget && dbWidget->hasRecycledSelectedEntries());
     m_ui->actionEntryRestore->setVisible(multiEntrySelected && hasRecycledEntries);
     m_ui->actionEntryRestore->setEnabled(multiEntrySelected && hasRecycledEntries);
     if (dbWidget) {
