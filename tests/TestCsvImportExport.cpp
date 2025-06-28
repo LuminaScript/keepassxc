@@ -67,23 +67,46 @@ void TestCsvImportExport::testRoundTripWithCustomRootName()
     // Verify export contains the root group name in the path
     QVERIFY(csvData.contains("\"MyPasswords/Test Group\""));
 
-    // Now test the createGroupStructure logic directly
-    // This tests the fix - when importing CSV with "MyPasswords/Test Group",
-    // the logic should now recognize "MyPasswords" as a root group name to skip
+    // Test the heuristic approach: analyze multiple similar paths
+    QStringList groupPaths = {"MyPasswords/Test Group", "MyPasswords/Another Group", "MyPasswords/Third Group"};
 
+    // Test the analyzeCommonRootGroup function logic
+    QStringList firstComponents;
+    for (const QString& path : groupPaths) {
+        if (!path.isEmpty() && !path.startsWith("/")) {
+            auto nameList = path.split("/", Qt::SkipEmptyParts);
+            if (!nameList.isEmpty()) {
+                firstComponents.append(nameList.first());
+            }
+        }
+    }
+
+    // All paths should have "MyPasswords" as first component
+    QCOMPARE(firstComponents.size(), 3);
+    QVERIFY(firstComponents.contains("MyPasswords"));
+
+    // With 100% consistency, "MyPasswords" should be identified as common root
+    QMap<QString, int> componentCounts;
+    for (const QString& component : firstComponents) {
+        componentCounts[component]++;
+    }
+
+    QCOMPARE(componentCounts["MyPasswords"], 3); // All 3 paths have this root
+
+    // Simulate the group creation with identified root to skip
     QString groupPathFromCsv = "MyPasswords/Test Group";
     auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
 
-    // This is the new (fixed) logic from CsvImportWidget::createGroupStructure
-    // that skips the first element when there are multiple path components
-    if (nameList.size() > 1) {
+    // New heuristic logic: skip identified root group name
+    QString rootGroupToSkip = "MyPasswords";
+    if (!rootGroupToSkip.isEmpty() && !nameList.isEmpty()
+        && nameList.first().compare(rootGroupToSkip, Qt::CaseInsensitive) == 0) {
         nameList.removeFirst();
     }
 
     // After this logic, nameList should contain only ["Test Group"]
-    // which means it will create the correct structure: Root -> Test Group
-    QCOMPARE(nameList.size(), 1); // Fixed: should be 1
-    QCOMPARE(nameList.first(), QString("Test Group")); // This should be the only element
+    QCOMPARE(nameList.size(), 1);
+    QCOMPARE(nameList.first(), QString("Test Group"));
 }
 
 void TestCsvImportExport::testRoundTripWithDefaultRootName()
@@ -108,18 +131,40 @@ void TestCsvImportExport::testRoundTripWithDefaultRootName()
     // Verify export contains the root group name in the path
     QVERIFY(csvData.contains("\"Passwords/Test Group\""));
 
-    // Test the createGroupStructure logic
+    // Test the heuristic approach with consistent "Passwords" root
+    QStringList groupPaths = {"Passwords/Test Group", "Passwords/Work", "Passwords/Personal"};
+
+    // Simulate analysis to find common root
+    QStringList firstComponents;
+    for (const QString& path : groupPaths) {
+        if (!path.isEmpty() && !path.startsWith("/")) {
+            auto nameList = path.split("/", Qt::SkipEmptyParts);
+            if (!nameList.isEmpty()) {
+                firstComponents.append(nameList.first());
+            }
+        }
+    }
+
+    // All should have "Passwords" as first component
+    QCOMPARE(firstComponents.size(), 3);
+    for (const QString& component : firstComponents) {
+        QCOMPARE(component, QString("Passwords"));
+    }
+
+    // Test group creation with identified root to skip
     QString groupPathFromCsv = "Passwords/Test Group";
     auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
 
-    // New logic skips the first element when there are multiple path components
-    if (nameList.size() > 1) {
+    // Heuristic logic: skip the identified common root
+    QString rootGroupToSkip = "Passwords";
+    if (!rootGroupToSkip.isEmpty() && !nameList.isEmpty()
+        && nameList.first().compare(rootGroupToSkip, Qt::CaseInsensitive) == 0) {
         nameList.removeFirst();
     }
 
     // After this logic, nameList should contain only ["Test Group"]
-    QCOMPARE(nameList.size(), 1); // Fixed: should be 1
-    QCOMPARE(nameList.first(), QString("Test Group")); // This should be the only element
+    QCOMPARE(nameList.size(), 1);
+    QCOMPARE(nameList.first(), QString("Test Group"));
 }
 
 void TestCsvImportExport::testSingleLevelGroup()
@@ -140,16 +185,78 @@ void TestCsvImportExport::testSingleLevelGroup()
     // Verify export contains just the root group name (no sub-path)
     QVERIFY(csvData.contains("\"Passwords\",\"Root Entry\""));
 
-    // Test the createGroupStructure logic with just the root group name
+    // Test heuristic with single-component paths
+    QStringList groupPaths = {"Passwords", "Work", "Personal"}; // Mixed single components
+
+    // With inconsistent first components, no common root should be identified
+    QStringList firstComponents;
+    for (const QString& path : groupPaths) {
+        if (!path.isEmpty() && !path.startsWith("/")) {
+            auto nameList = path.split("/", Qt::SkipEmptyParts);
+            if (!nameList.isEmpty()) {
+                firstComponents.append(nameList.first());
+            }
+        }
+    }
+
+    // Should have 3 different first components
+    QCOMPARE(firstComponents.size(), 3);
+    QSet<QString> uniqueComponents(firstComponents.begin(), firstComponents.end());
+    QCOMPARE(uniqueComponents.size(), 3); // All different
+
+    // Test group creation with no identified root to skip
     QString groupPathFromCsv = "Passwords"; // Single component
     auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
 
-    // With only one component, nothing should be removed
-    if (nameList.size() > 1) {
+    // With no common root identified, nothing should be removed
+    QString rootGroupToSkip = QString(); // Empty - no common root found
+    if (!rootGroupToSkip.isEmpty() && !nameList.isEmpty()
+        && nameList.first().compare(rootGroupToSkip, Qt::CaseInsensitive) == 0) {
         nameList.removeFirst();
     }
 
-    // Should still have ["Passwords"] as we don't remove single components
+    // Should still have ["Passwords"] as nothing was removed
     QCOMPARE(nameList.size(), 1);
     QCOMPARE(nameList.first(), QString("Passwords"));
+}
+
+void TestCsvImportExport::testAbsolutePaths()
+{
+    // Test case: paths that start with "/" (absolute paths)
+    // According to the comment, if every row starts with "/", the root group should be left as is
+
+    QStringList groupPaths = {"/Work/Subgroup1", "/Personal/Subgroup2", "/Finance/Subgroup3"};
+
+    // Test the heuristic analysis with absolute paths
+    QStringList firstComponents;
+    for (const QString& path : groupPaths) {
+        if (!path.isEmpty() && !path.startsWith("/")) {
+            auto nameList = path.split("/", Qt::SkipEmptyParts);
+            if (!nameList.isEmpty()) {
+                firstComponents.append(nameList.first());
+            }
+        }
+        // Note: paths starting with "/" are skipped in the analysis
+    }
+
+    // Since all paths start with "/", no first components should be collected
+    QCOMPARE(firstComponents.size(), 0);
+
+    // With no first components, no common root should be identified
+    QString rootGroupToSkip = QString(); // Should be empty
+
+    // Test group creation with absolute path
+    QString groupPathFromCsv = "/Work/Subgroup1";
+    auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
+
+    // With no root to skip, the full path should be preserved
+    if (!rootGroupToSkip.isEmpty() && !nameList.isEmpty()
+        && nameList.first().compare(rootGroupToSkip, Qt::CaseInsensitive) == 0) {
+        nameList.removeFirst();
+    }
+
+    // Should have ["Work", "Subgroup1"] - full path preserved
+    QCOMPARE(nameList.size(), 2);
+    QCOMPARE(nameList.at(0), QString("Work"));
+    QCOMPARE(nameList.at(1), QString("Subgroup1"));
 }

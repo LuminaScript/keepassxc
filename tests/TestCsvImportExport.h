@@ -37,6 +37,7 @@ private slots:
     void testRoundTripWithCustomRootName();
     void testRoundTripWithDefaultRootName();
     void testSingleLevelGroup();
+    void testAbsolutePaths();
 
 private:
     QSharedPointer<Database> m_db;

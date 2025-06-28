@@ -33,8 +33,60 @@
 
 namespace
 {
+    // Analyze all group paths to determine the common root group name
+    QString analyzeCommonRootGroup(const QStringList& groupPaths)
+    {
+        QStringList firstComponents;
+
+        // Collect first component from each non-empty group path
+        for (const QString& path : groupPaths) {
+            if (path.isEmpty()) {
+                continue;
+            }
+
+            // Skip paths that start with "/" (absolute paths)
+            if (path.startsWith("/")) {
+                continue;
+            }
+
+            auto nameList = path.split("/", Qt::SkipEmptyParts);
+            if (!nameList.isEmpty()) {
+                firstComponents.append(nameList.first());
+            }
+        }
+
+        // If we have no valid first components, return empty string
+        if (firstComponents.isEmpty()) {
+            return QString();
+        }
+
+        // Count occurrences of each first component
+        QMap<QString, int> componentCounts;
+        for (const QString& component : firstComponents) {
+            componentCounts[component]++;
+        }
+
+        // Find the most common first component
+        QString mostCommon;
+        int maxCount = 0;
+        for (auto it = componentCounts.constBegin(); it != componentCounts.constEnd(); ++it) {
+            if (it.value() > maxCount) {
+                maxCount = it.value();
+                mostCommon = it.key();
+            }
+        }
+
+        // Only consider it a common root if it appears in most entries (>= 80%)
+        double threshold = firstComponents.size() * 0.8;
+        if (maxCount >= threshold) {
+            return mostCommon;
+        }
+
+        return QString(); // No clear common root
+    }
+
     // Extract group names from nested path and return the last group created
-    Group* createGroupStructure(Database* db, const QString& groupPath)
+    Group* createGroupStructure(Database* db, const QString& groupPath, const QString& rootGroupToSkip)
     {
         auto group = db->rootGroup();
         if (!group || groupPath.isEmpty()) {
@@ -42,11 +94,10 @@ namespace
         }
 
         auto nameList = groupPath.split("/", Qt::SkipEmptyParts);
-        // Skip over first group name if it appears to be a root group name
-        // This handles CSV imports where the export included the root group name
-        if (nameList.size() > 1) {
-            // When we have multiple path components, the first one is typically
-            // the root group name from CSV export and should be skipped
+
+        // Skip the identified root group name if present
+        if (!rootGroupToSkip.isEmpty() && !nameList.isEmpty()
+            && nameList.first().compare(rootGroupToSkip, Qt::CaseInsensitive) == 0) {
             nameList.removeFirst();
         }
 
@@ -244,8 +295,21 @@ QSharedPointer<Database> CsvImportWidget::buildDatabase()
     db->rootGroup()->setNotes(tr("Imported from CSV file: %1").arg(m_filename));
 
     auto rows = m_parserModel->rowCount() - m_parserModel->skippedRows();
+
+    // Pre-analyze all group paths to determine common root group name
+    QStringList allGroupPaths;
     for (int r = 0; r < rows; ++r) {
-        auto group = createGroupStructure(db.data(), m_parserModel->data(m_parserModel->index(r, 0)).toString());
+        QString groupPath = m_parserModel->data(m_parserModel->index(r, 0)).toString();
+        if (!groupPath.isEmpty()) {
+            allGroupPaths.append(groupPath);
+        }
+    }
+
+    QString rootGroupToSkip = analyzeCommonRootGroup(allGroupPaths);
+
+    for (int r = 0; r < rows; ++r) {
+        auto group = createGroupStructure(
+            db.data(), m_parserModel->data(m_parserModel->index(r, 0)).toString(), rootGroupToSkip);
         if (!group) {
             continue;
         }
