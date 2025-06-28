@@ -33,7 +33,7 @@ private slots:
     void initTestCase();
     void init();
     void cleanup();
-    
+
     void testRoundTripWithCustomRootName();
     void testRoundTripWithDefaultRootName();
     void testSingleLevelGroup();

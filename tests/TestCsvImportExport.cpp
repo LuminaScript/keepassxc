@@ -49,12 +49,12 @@ void TestCsvImportExport::testRoundTripWithCustomRootName()
 {
     // Create a database with a custom root group name
     Group* groupRoot = m_db->rootGroup();
-    groupRoot->setName("MyPasswords");  // Custom root name instead of default "Passwords"
-    
+    groupRoot->setName("MyPasswords"); // Custom root name instead of default "Passwords"
+
     auto* group = new Group();
     group->setName("Test Group");
     group->setParent(groupRoot);
-    
+
     auto* entry = new Entry();
     entry->setGroup(group);
     entry->setTitle("Test Entry");
@@ -63,27 +63,27 @@ void TestCsvImportExport::testRoundTripWithCustomRootName()
 
     // Export to CSV
     QString csvData = m_csvExporter->exportDatabase(m_db);
-    
+
     // Verify export contains the root group name in the path
     QVERIFY(csvData.contains("\"MyPasswords/Test Group\""));
-    
+
     // Now test the createGroupStructure logic directly
     // This tests the fix - when importing CSV with "MyPasswords/Test Group",
     // the logic should now recognize "MyPasswords" as a root group name to skip
-    
+
     QString groupPathFromCsv = "MyPasswords/Test Group";
     auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
-    
+
     // This is the new (fixed) logic from CsvImportWidget::createGroupStructure
     // that skips the first element when there are multiple path components
     if (nameList.size() > 1) {
         nameList.removeFirst();
     }
-    
+
     // After this logic, nameList should contain only ["Test Group"]
     // which means it will create the correct structure: Root -> Test Group
-    QCOMPARE(nameList.size(), 1);  // Fixed: should be 1
-    QCOMPARE(nameList.first(), QString("Test Group"));  // This should be the only element
+    QCOMPARE(nameList.size(), 1); // Fixed: should be 1
+    QCOMPARE(nameList.first(), QString("Test Group")); // This should be the only element
 }
 
 void TestCsvImportExport::testRoundTripWithDefaultRootName()
@@ -91,11 +91,11 @@ void TestCsvImportExport::testRoundTripWithDefaultRootName()
     // Test with default "Passwords" root name to ensure it works correctly
     Group* groupRoot = m_db->rootGroup();
     // Default name is "Passwords" - don't change it
-    
+
     auto* group = new Group();
     group->setName("Test Group");
     group->setParent(groupRoot);
-    
+
     auto* entry = new Entry();
     entry->setGroup(group);
     entry->setTitle("Test Entry");
@@ -104,51 +104,51 @@ void TestCsvImportExport::testRoundTripWithDefaultRootName()
 
     // Export to CSV
     QString csvData = m_csvExporter->exportDatabase(m_db);
-    
+
     // Verify export contains the root group name in the path
     QVERIFY(csvData.contains("\"Passwords/Test Group\""));
-    
+
     // Test the createGroupStructure logic
     QString groupPathFromCsv = "Passwords/Test Group";
     auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
-    
+
     // New logic skips the first element when there are multiple path components
     if (nameList.size() > 1) {
         nameList.removeFirst();
     }
-    
+
     // After this logic, nameList should contain only ["Test Group"]
-    QCOMPARE(nameList.size(), 1);  // Fixed: should be 1
-    QCOMPARE(nameList.first(), QString("Test Group"));  // This should be the only element
+    QCOMPARE(nameList.size(), 1); // Fixed: should be 1
+    QCOMPARE(nameList.first(), QString("Test Group")); // This should be the only element
 }
 
 void TestCsvImportExport::testSingleLevelGroup()
 {
     // Test case: entry is directly in root group (no sub-groups)
     // This should still work correctly and not remove any path components
-    
+
     Group* groupRoot = m_db->rootGroup();
     auto* entry = new Entry();
-    entry->setGroup(groupRoot);  // Put entry directly in root
+    entry->setGroup(groupRoot); // Put entry directly in root
     entry->setTitle("Root Entry");
     entry->setUsername("rootuser");
     entry->setPassword("rootpass");
 
     // Export to CSV
     QString csvData = m_csvExporter->exportDatabase(m_db);
-    
+
     // Verify export contains just the root group name (no sub-path)
     QVERIFY(csvData.contains("\"Passwords\",\"Root Entry\""));
-    
+
     // Test the createGroupStructure logic with just the root group name
-    QString groupPathFromCsv = "Passwords";  // Single component
+    QString groupPathFromCsv = "Passwords"; // Single component
     auto nameList = groupPathFromCsv.split("/", Qt::SkipEmptyParts);
-    
+
     // With only one component, nothing should be removed
     if (nameList.size() > 1) {
         nameList.removeFirst();
     }
-    
+
     // Should still have ["Passwords"] as we don't remove single components
     QCOMPARE(nameList.size(), 1);
     QCOMPARE(nameList.first(), QString("Passwords"));

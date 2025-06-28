@@ -115,12 +115,12 @@ void TestCsvExporter::testExportImportRoundTrip()
 {
     // Set up database with custom root group name and nested structure
     Group* groupRoot = m_db->rootGroup();
-    groupRoot->setName("MyPasswords");  // Custom root name instead of default "Passwords"
-    
+    groupRoot->setName("MyPasswords"); // Custom root name instead of default "Passwords"
+
     auto* group = new Group();
     group->setName("Test Group");
     group->setParent(groupRoot);
-    
+
     auto* entry = new Entry();
     entry->setGroup(group);
     entry->setTitle("Test Entry");
@@ -129,14 +129,14 @@ void TestCsvExporter::testExportImportRoundTrip()
 
     // Export to CSV
     QString csvData = m_csvExporter->exportDatabase(m_db);
-    
+
     // Verify export contains the root group name in the path
     QVERIFY(csvData.contains("\"MyPasswords/Test Group\""));
-    
+
     // The exported CSV should look like:
     // "Group","Title","Username","Password",...
     // "MyPasswords/Test Group","Test Entry","testuser","testpass",...
-    
+
     // This test demonstrates the issue - when imported, the CSV reader should
     // recognize "MyPasswords" as the root group and not create a nested structure
 }
