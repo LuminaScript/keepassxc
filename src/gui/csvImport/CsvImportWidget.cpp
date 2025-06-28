@@ -42,8 +42,11 @@ namespace
         }
 
         auto nameList = groupPath.split("/", Qt::SkipEmptyParts);
-        // Skip over first group name if root
-        if (nameList.first().compare("root", Qt::CaseInsensitive) == 0) {
+        // Skip over first group name if it appears to be a root group name
+        // This handles CSV imports where the export included the root group name
+        if (nameList.size() > 1) {
+            // When we have multiple path components, the first one is typically
+            // the root group name from CSV export and should be skipped
             nameList.removeFirst();
         }
 
