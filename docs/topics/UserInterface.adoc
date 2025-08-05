@@ -18,7 +18,18 @@ image::main_interface.png[]
 
 *(D) Preview* – Shows a preview of the selected group or entry. You can interact with most information stored in an entry from here without opening the entry for editing. You can temporarily hide this preview using the down-arrow button on the right hand side or completely disable it from the View menu.
 
-TIP: You can enable double-click copying of entry username and password in the Application Security Settings. This is turned off by default starting with version 2.7.0.
+[TIP]
+====
+Starting with version 2.7.0, double-click copying of entry usernames and passwords is disabled by default.
+
+To enable it:
+
+. Open *KeePassXC*.
+. Navigate to *Tools* → *Settings*.
+. In the left sidebar, select *General*.
+. Under *Entry Management*, check the box for _"Copy data on double clicking field in entry view"_.
+====
+
 
 === Toolbar
 The toolbar provides a quick way to perform common tasks with your database. Some entries in the toolbar are dynamically disabled based on the information contained in the selected entry. Every common action in KeePassXC can be controlled with a keyboard shortcut as well.
@@ -110,3 +121,4 @@ Example: `msiexec.exe /q /i KeePassXC-Y.Y.Y-WinZZ.msi AUTOSTARTPROGRAM=0`
 KeePassXC comes with the command line tool *keepassxc-cli* to access, view, and manipulate your database directly from a terminal window. The tool is documented through a separate man page, which can be shown using `man keepassxc-cli`, or through the on-demand help using `keepassxc-cli [command] -h`. An online version of the man page is https://github.com/keepassxreboot/keepassxc/blob/latest/docs/man/keepassxc-cli.1.adoc[available on GitHub].
 // end::advanced[]
 // end::content[]
+
